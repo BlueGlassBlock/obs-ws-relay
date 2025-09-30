@@ -33,13 +33,13 @@
     },
     "platformConfig": {
         "macos": {
-            "bundleId": "com.example.plugintemplate-for-obs"
+            "bundleId": "com.blueglass.obs-ws-relay"
         }
     },
-    "name": "plugintemplate-for-obs",
-    "displayName": "Plugin Template for OBS",
+    "name": "obs-ws-relay",
+    "displayName": "OBS WebSocket Relay",
     "version": "1.0.0",
-    "author": "Your Name Here",
-    "website": "https://example.com",
-    "email": "me@example.com"
+    "author": "BlueGlassBlock",
+    "website": "https://github.com/BlueGlassBlock/obs-ws-relay",
+    "email": "blueglass@example.com"
 }
