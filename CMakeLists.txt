@@ -40,8 +40,8 @@ endif()
 
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE 
   src/plugin-main.c
-  src/ws-relay-impl.c
-  src/ws-client.c
+  src/ws-relay-impl.cpp
+  src/ws-client.cpp
   src/ws-config.c
   src/ws-relay-settings.cpp)
 set_target_properties_plugin(${CMAKE_PROJECT_NAME} PROPERTIES OUTPUT_NAME ${_name})

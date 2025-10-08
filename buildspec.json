@@ -38,7 +38,7 @@
     },
     "name": "obs-ws-relay",
     "displayName": "OBS WebSocket Relay",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "author": "BlueGlassBlock",
     "website": "https://github.com/BlueGlassBlock/obs-ws-relay",
     "email": "blueglass@example.com"

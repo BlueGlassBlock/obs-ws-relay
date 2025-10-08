@@ -71,7 +71,7 @@ bool parse_ws_url(const char *url, char **host, uint16_t *port, char **path, boo
     if (colon && (!slash || colon < slash)) {
         // Port specified
         size_t host_len = colon - url;
-        *host = bzalloc(host_len + 1);
+        *host = (char*) bzalloc(host_len + 1);
         strncpy(*host, url, host_len);
 
         char *endptr;
@@ -88,7 +88,7 @@ bool parse_ws_url(const char *url, char **host, uint16_t *port, char **path, boo
     } else if (slash) {
         // No port, path specified
         size_t host_len = slash - url;
-        *host = bzalloc(host_len + 1);
+        *host = (char *)bzalloc(host_len + 1);
         strncpy(*host, url, host_len);
         *path = bstrdup(slash);
     } else {
@@ -108,14 +108,14 @@ void ws_connection_init(ws_connection_t *conn, bool is_remote, ws_relay_t *relay
     conn->state = WS_STATE_DISCONNECTED;
     conn->is_remote = is_remote;
     conn->relay = relay;
-    dstr_init(&conn->buffer);
+    conn->buffers = std::vector<std::vector<char>>();
 }
 
 // Free connection
 void ws_connection_free(ws_connection_t *conn) {
     if (!conn) return;
 
-    dstr_free(&conn->buffer);
+    conn->buffers.clear();
     bfree(conn->address);
     bfree(conn->path);
     memset(conn, 0, sizeof(ws_connection_t));
@@ -144,8 +144,9 @@ int ws_callback_obs(struct lws *wsi, enum lws_callback_reasons reason, void *use
             // Forward message to remote if connected
             pthread_mutex_lock(&relay->mutex);
             if (relay->remote_conn.state == WS_STATE_CONNECTED && relay->remote_conn.wsi) {
-                dstr_resize(&relay->remote_conn.buffer, LWS_PRE);
-                dstr_ncat(&relay->remote_conn.buffer, in, len);
+                std::vector<char> buf(LWS_PRE + len);
+                std::memcpy(buf.data() + LWS_PRE, in, len);
+                relay->remote_conn.buffers.push_back(std::move(buf));
                 lws_callback_on_writable(relay->remote_conn.wsi);
             }
             pthread_mutex_unlock(&relay->mutex);
@@ -153,16 +154,22 @@ int ws_callback_obs(struct lws *wsi, enum lws_callback_reasons reason, void *use
 
         case LWS_CALLBACK_CLIENT_WRITEABLE:
             pthread_mutex_lock(&relay->mutex);
-            if (conn->buffer.len > LWS_PRE) {
-                obs_log(LOG_INFO, "Write to OBS: %.*s", (int) len, (char *) conn->buffer.array);
-                int n = lws_write(wsi, (unsigned char *) conn->buffer.array + LWS_PRE, conn->buffer.len - LWS_PRE,
-                                  LWS_WRITE_TEXT);
-                if (n < 0) {
-                    obs_log(LOG_ERROR, "Failed to write to OBS WebSocket");
-                    pthread_mutex_unlock(&relay->mutex);
-                    return -1;
+            if (!conn->buffers.empty()) {
+                for (auto &buf: conn->buffers) {
+                    if (relay->config.enable_logging) {
+                        obs_log(LOG_INFO, "Write to OBS: %.*s", (int) (buf.size() - LWS_PRE),
+                                buf.data() + LWS_PRE);
+                    }
+                    int n = lws_write(wsi, (unsigned char *) buf.data() + LWS_PRE,
+                                      buf.size() - LWS_PRE, LWS_WRITE_TEXT);
+                    if (n < 0) {
+                        obs_log(LOG_ERROR, "Failed to write to OBS WebSocket");
+                        conn->buffers.clear();
+                        pthread_mutex_unlock(&relay->mutex);
+                        return -1;
+                    }
                 }
-                dstr_resize(&conn->buffer, LWS_PRE);
+                conn->buffers.clear();
             }
             pthread_mutex_unlock(&relay->mutex);
             break;
@@ -212,8 +219,9 @@ int ws_callback_remote(struct lws *wsi, enum lws_callback_reasons reason, void *
             // Forward message to OBS if connected
             pthread_mutex_lock(&relay->mutex);
             if (relay->obs_conn.state == WS_STATE_CONNECTED && relay->obs_conn.wsi) {
-                dstr_resize(&relay->obs_conn.buffer, LWS_PRE);
-                dstr_ncat(&relay->obs_conn.buffer, in, len);
+                std::vector<char> buf(LWS_PRE + len);
+                std::memcpy(buf.data() + LWS_PRE, in, len);
+                relay->obs_conn.buffers.push_back(std::move(buf));
                 lws_callback_on_writable(relay->obs_conn.wsi);
             }
             pthread_mutex_unlock(&relay->mutex);
@@ -221,16 +229,22 @@ int ws_callback_remote(struct lws *wsi, enum lws_callback_reasons reason, void *
 
         case LWS_CALLBACK_CLIENT_WRITEABLE:
             pthread_mutex_lock(&relay->mutex);
-            if (conn->buffer.len > LWS_PRE) {
-                obs_log(LOG_INFO, "Write to remote: %.*s", (int) len, (char *) conn->buffer.array);
-                int n = lws_write(wsi, (unsigned char *) conn->buffer.array + LWS_PRE, conn->buffer.len - LWS_PRE,
-                                  LWS_WRITE_TEXT);
-                if (n < 0) {
-                    obs_log(LOG_ERROR, "Failed to write to remote WebSocket");
-                    pthread_mutex_unlock(&relay->mutex);
-                    return -1;
+            if (!conn->buffers.empty()) {
+                for (auto &buf: conn->buffers) {
+                    if (relay->config.enable_logging) {
+                        obs_log(LOG_INFO, "Write to remote: %.*s", (int) (buf.size() - LWS_PRE),
+                                buf.data() + LWS_PRE);
+                    }
+                    int n = lws_write(wsi, (unsigned char *) buf.data() + LWS_PRE,
+                                      buf.size() - LWS_PRE, LWS_WRITE_TEXT);
+                    if (n < 0) {
+                        obs_log(LOG_ERROR, "Failed to write to remote WebSocket");
+                        conn->buffers.clear();
+                        pthread_mutex_unlock(&relay->mutex);
+                        return -1;
+                    }
                 }
-                dstr_resize(&conn->buffer, LWS_PRE);
+                conn->buffers.clear();
             }
             pthread_mutex_unlock(&relay->mutex);
             break;

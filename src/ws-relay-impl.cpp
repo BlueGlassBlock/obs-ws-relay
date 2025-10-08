@@ -29,7 +29,7 @@ ws_relay_t *ws_relay_create(const ws_relay_config_t *config) {
         return NULL;
     }
 
-    ws_relay_t *relay = bzalloc(sizeof(ws_relay_t));
+    ws_relay_t *relay = (ws_relay_t *) bzalloc(sizeof(ws_relay_t));
     if (!relay) {
         obs_log(LOG_ERROR, "Failed to allocate relay structure");
         return NULL;
@@ -166,18 +166,20 @@ void ws_relay_stop(ws_relay_t *relay) {
 
     relay->running = false;
 
-    lws_cancel_service(relay->context);
+    if (relay->context) {
+	    lws_cancel_service(relay->context);
+    }
 
     // Close connections
     pthread_mutex_lock(&relay->mutex);
 
-    if (relay->obs_conn.wsi) {
+    if (relay->obs_conn.wsi && relay->obs_conn.state == WS_STATE_CONNECTED) {
         lws_close_reason(relay->obs_conn.wsi, LWS_CLOSE_STATUS_NORMAL, NULL, 0);
         relay->obs_conn.wsi = NULL;
     }
     relay->obs_conn.state = WS_STATE_DISCONNECTED;
 
-    if (relay->remote_conn.wsi) {
+    if (relay->remote_conn.wsi && relay->remote_conn.state == WS_STATE_CONNECTED) {
         lws_close_reason(relay->remote_conn.wsi, LWS_CLOSE_STATUS_NORMAL, NULL, 0);
         relay->remote_conn.wsi = NULL;
     }

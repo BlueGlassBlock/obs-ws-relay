@@ -7,12 +7,6 @@ InstallDir "C:\ProgramData\obs-studio\plugins\obs-ws-relay"
 Page directory
 Page instfiles
 
-Function .onInit
-    StrCpy $0 "$PROGRAMFILES64\obs-studio\bin\64bit\obs64.exe"
-    IfFileExists "$0" +2 0
-        MessageBox MB_ICONEXCLAMATION "OBS is not detected at $0$\r$\nPlease confirm that OBS is installed before proceeding."
-FunctionEnd
-
 Section "Install"
     SetOutPath "$INSTDIR\bin\64bit"
     File "build_x64\Release\obs-ws-relay.dll"
@@ -29,7 +23,7 @@ Section "Install"
 
     WriteRegStr HKLM "${REG_UNINSTALL}" "DisplayName" "OBS Websockets Relay"
     WriteRegStr HKLM "${REG_UNINSTALL}" "UninstallString" "$INSTDIR\Uninstall.exe"
-    WriteRegStr HKLM "${REG_UNINSTALL}" "DisplayVersion" "1.0.0"
+    WriteRegStr HKLM "${REG_UNINSTALL}" "DisplayVersion" "1.0.1"
     WriteRegStr HKLM "${REG_UNINSTALL}" "Publisher" "BlueGlassBlock"
     WriteRegStr HKLM "${REG_UNINSTALL}" "InstallLocation" "$INSTDIR"
     WriteRegDWORD HKLM "${REG_UNINSTALL}" "NoModify" 1

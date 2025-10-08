@@ -23,10 +23,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include <util/dstr.h>
 #include <util/threading.h>
 #include <time.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include <vector>
 
 // Forward declarations
 typedef struct ws_connection ws_connection_t;
@@ -36,7 +33,7 @@ typedef struct ws_relay ws_relay_t;
 struct ws_connection {
     struct lws *wsi;
     ws_connection_state_t state;
-    struct dstr buffer;
+    std::vector<std::vector<char>> buffers;
     bool is_remote;
     ws_relay_t *relay;
     char *address;
@@ -76,7 +73,3 @@ int ws_callback_remote(struct lws *wsi, enum lws_callback_reasons reason, void *
 
 // LWS protocols array
 extern const struct lws_protocols protocols[];
-
-#ifdef __cplusplus
-}
-#endif
