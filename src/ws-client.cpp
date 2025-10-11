@@ -181,6 +181,7 @@ int ws_callback_obs(struct lws *wsi, enum lws_callback_reasons reason, void *use
             pthread_mutex_unlock(&relay->mutex);
             break;
 
+        case LWS_CALLBACK_CLIENT_CLOSED:
         case LWS_CALLBACK_CLOSED:
             obs_log(LOG_INFO, "OBS WebSocket connection closed");
             pthread_mutex_lock(&relay->mutex);
@@ -255,7 +256,8 @@ int ws_callback_remote(struct lws *wsi, enum lws_callback_reasons reason, void *
             conn->state = WS_STATE_ERROR;
             pthread_mutex_unlock(&relay->mutex);
             break;
-
+        
+        case LWS_CALLBACK_CLIENT_CLOSED:
         case LWS_CALLBACK_CLOSED:
             obs_log(LOG_INFO, "Remote WebSocket connection closed");
             pthread_mutex_lock(&relay->mutex);
@@ -265,7 +267,7 @@ int ws_callback_remote(struct lws *wsi, enum lws_callback_reasons reason, void *
             break;
 
         default:
-            break;
+		    break;
     }
 
     return 0;
