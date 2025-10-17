@@ -23,7 +23,7 @@ Section "Install"
 
     WriteRegStr HKLM "${REG_UNINSTALL}" "DisplayName" "OBS Websockets Relay"
     WriteRegStr HKLM "${REG_UNINSTALL}" "UninstallString" "$INSTDIR\Uninstall.exe"
-    WriteRegStr HKLM "${REG_UNINSTALL}" "DisplayVersion" "1.0.1"
+    WriteRegStr HKLM "${REG_UNINSTALL}" "DisplayVersion" "1.0.2"
     WriteRegStr HKLM "${REG_UNINSTALL}" "Publisher" "BlueGlassBlock"
     WriteRegStr HKLM "${REG_UNINSTALL}" "InstallLocation" "$INSTDIR"
     WriteRegDWORD HKLM "${REG_UNINSTALL}" "NoModify" 1

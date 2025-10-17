@@ -109,6 +109,7 @@ void ws_connection_init(ws_connection_t *conn, bool is_remote, ws_relay_t *relay
     conn->is_remote = is_remote;
     conn->relay = relay;
     conn->buffers = std::vector<std::vector<char>>();
+    conn->payload = std::vector<char>(LWS_PRE);
 }
 
 // Free connection
@@ -144,10 +145,20 @@ int ws_callback_obs(struct lws *wsi, enum lws_callback_reasons reason, void *use
             // Forward message to remote if connected
             pthread_mutex_lock(&relay->mutex);
             if (relay->remote_conn.state == WS_STATE_CONNECTED && relay->remote_conn.wsi) {
-                std::vector<char> buf(LWS_PRE + len);
-                std::memcpy(buf.data() + LWS_PRE, in, len);
-                relay->remote_conn.buffers.push_back(std::move(buf));
-                lws_callback_on_writable(relay->remote_conn.wsi);
+                if (lws_is_first_fragment(wsi)) {
+                    relay->remote_conn.payload.resize(LWS_PRE);
+                }
+
+                // concatenate data to payload
+                auto size = relay->remote_conn.payload.size();
+                relay->remote_conn.payload.resize(size + len);
+                std::memcpy(relay->remote_conn.payload.data() + size, in, len);
+
+                if (lws_is_final_fragment(wsi)) {
+                    relay->remote_conn.buffers.push_back(std::move(relay->remote_conn.payload));
+                    lws_callback_on_writable(relay->remote_conn.wsi);
+                    relay->remote_conn.payload = std::vector<char>(LWS_PRE);
+                }
             }
             pthread_mutex_unlock(&relay->mutex);
             break;
@@ -220,10 +231,18 @@ int ws_callback_remote(struct lws *wsi, enum lws_callback_reasons reason, void *
             // Forward message to OBS if connected
             pthread_mutex_lock(&relay->mutex);
             if (relay->obs_conn.state == WS_STATE_CONNECTED && relay->obs_conn.wsi) {
-                std::vector<char> buf(LWS_PRE + len);
-                std::memcpy(buf.data() + LWS_PRE, in, len);
-                relay->obs_conn.buffers.push_back(std::move(buf));
-                lws_callback_on_writable(relay->obs_conn.wsi);
+                if (lws_is_first_fragment(wsi)) {
+                    relay->obs_conn.payload.resize(LWS_PRE);
+                }
+                // concatenate data to payload
+                auto size = relay->obs_conn.payload.size();
+                relay->obs_conn.payload.resize(size + len);
+                std::memcpy(relay->obs_conn.payload.data() + size, in, len);
+                if (lws_is_final_fragment(wsi)) {
+                    relay->obs_conn.buffers.push_back(std::move(relay->obs_conn.payload));
+                    lws_callback_on_writable(relay->obs_conn.wsi);
+                    relay->obs_conn.payload = std::vector<char>(LWS_PRE);
+                }
             }
             pthread_mutex_unlock(&relay->mutex);
             break;

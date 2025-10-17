@@ -33,6 +33,7 @@ typedef struct ws_relay ws_relay_t;
 struct ws_connection {
     struct lws *wsi;
     ws_connection_state_t state;
+    std::vector<char> payload;
     std::vector<std::vector<char>> buffers;
     bool is_remote;
     ws_relay_t *relay;
